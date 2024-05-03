@@ -1,6 +1,8 @@
+import java.net.Socket;
 import java.security.PublicKey;
 
 public class Cliente {
+    private Socket socket;
     private PublicKey publicKey;
     private long p;
     private long g;
