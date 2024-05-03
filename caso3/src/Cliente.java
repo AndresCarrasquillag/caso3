@@ -31,7 +31,6 @@ public class Cliente {
         }
     }
 
-
     public Cliente(PublicKey publicKey, long p, long g, long x) {
         this.publicKey = publicKey;
     }
