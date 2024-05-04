@@ -62,7 +62,7 @@ public class Cliente {
             clientKeyPairGen.initialize(dhSpecClient);
             KeyPair clientKeyPair = clientKeyPairGen.generateKeyPair();
             BigInteger gymodp = ((DHPublicKey) clientKeyPair.getPublic()).getY();
-            out.writeUTF(gymodp.toString());
+            out.writeObject(gymodp);
 
             //Calcular Llave
             KeyAgreement keyAgreement = KeyAgreement.getInstance("DH");

@@ -67,8 +67,10 @@ public class Servidor {
                     byte[] firmaDH = signature.sign();
                     out.writeObject(firmaDH);
 
+                    
+
                     // Recibir gxmody y calcular clave secreta
-                    BigInteger gymodp = new BigInteger(in.readUTF());
+                    BigInteger gymodp = (BigInteger) in.readObject();
                     KeyAgreement keyAgreement = KeyAgreement.getInstance("DH");
                     keyAgreement.init(serverKeyPair.getPrivate());
                     DHPublicKeySpec dhPubKeySpec = new DHPublicKeySpec(gymodp, p, g);
