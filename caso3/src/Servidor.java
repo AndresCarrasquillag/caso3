@@ -42,10 +42,11 @@ public class Servidor {
                     out.writeObject(firma);
 
                     // Simulación de parámetros DH
-                    BigInteger g = new BigInteger("987654321");
-                    BigInteger p = new BigInteger("123456789");
-                    BigInteger gxmodp = g.modPow(new BigInteger("2"), p);
-
+                    BigInteger[] params = DiffieHallman.generarParams();
+                    BigInteger g = params[0];
+                    BigInteger p = params[1];
+                    BigInteger gxmodp = params[2];
+                    
                     out.writeObject(g);
                     out.writeObject(p);
                     out.writeObject(gxmodp);
