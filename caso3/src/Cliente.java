@@ -3,9 +3,19 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.math.BigInteger;
 import java.net.Socket;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
+
+import javax.crypto.KeyAgreement;
+import javax.crypto.SecretKey;
+import javax.crypto.interfaces.DHPublicKey;
+import javax.crypto.spec.DHParameterSpec;
+import javax.crypto.spec.DHPublicKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 
 public class Cliente {
     public static final int PUERTO = 3400;
@@ -45,6 +55,26 @@ public class Cliente {
             signature.update(p.toByteArray());
             signature.update(gxmodp.toByteArray());
             System.out.println(signature.verify(firmaDH) ? "OK" : "ERROR");
+
+            // Enviar gmody
+            DHParameterSpec dhSpecClient = new DHParameterSpec(p, g);
+            KeyPairGenerator clientKeyPairGen = KeyPairGenerator.getInstance("DH");
+            clientKeyPairGen.initialize(dhSpecClient);
+            KeyPair clientKeyPair = clientKeyPairGen.generateKeyPair();
+            BigInteger gymodp = ((DHPublicKey) clientKeyPair.getPublic()).getY();
+            out.writeUTF(gymodp.toString());
+
+            //Calcular Llave
+            KeyAgreement keyAgreement = KeyAgreement.getInstance("DH");
+            keyAgreement.init(clientKeyPair.getPrivate());
+            DHPublicKeySpec dhPubKeySpec = new DHPublicKeySpec(gxmodp, p, g);
+            PublicKey serverPublicKey = KeyFactory.getInstance("DH").generatePublic(dhPubKeySpec);
+            keyAgreement.doPhase(serverPublicKey, true);
+            byte[] clientSecret = keyAgreement.generateSecret();
+            SecretKey clientAesKey = new SecretKeySpec(clientSecret, 0, 16, "AES");
+            System.out.println(clientAesKey);
+
+
 
         } catch (Exception e) {
             System.out.println("Excepción: " + e.getMessage());

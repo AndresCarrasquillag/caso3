@@ -4,11 +4,18 @@ import java.io.ObjectOutputStream;
 import java.math.BigInteger;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
+
+import javax.crypto.KeyAgreement;
+import javax.crypto.SecretKey;
+import javax.crypto.interfaces.DHPublicKey;
+import javax.crypto.spec.DHPublicKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 
 public class Servidor {
     public static final int PUERTO = 3400;
@@ -42,20 +49,34 @@ public class Servidor {
                     out.writeObject(firma);
 
                     // Simulación de parámetros DH
-                    BigInteger[] params = DiffieHallman.generarParams();
-                    BigInteger g = params[0];
-                    BigInteger p = params[1];
-                    BigInteger gxmodp = params[2];
+                    KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("DH");
+                    keyPairGen.initialize(1024);
+                    KeyPair serverKeyPair = keyPairGen.generateKeyPair();
+                    DHPublicKey serverPublicKey = (DHPublicKey) serverKeyPair.getPublic();
+                    BigInteger g = serverPublicKey.getParams().getG();
+                    BigInteger p = serverPublicKey.getParams().getP();
+                    BigInteger gxmodp = serverPublicKey.getY();
                     
+                    // Enviar G, P y gxmodp
                     out.writeObject(g);
                     out.writeObject(p);
                     out.writeObject(gxmodp);
-
                     signature.update(g.toByteArray());
                     signature.update(p.toByteArray());
                     signature.update(gxmodp.toByteArray());
                     byte[] firmaDH = signature.sign();
                     out.writeObject(firmaDH);
+
+                    // Recibir gxmody y calcular clave secreta
+                    BigInteger gymodp = new BigInteger(in.readUTF());
+                    KeyAgreement keyAgreement = KeyAgreement.getInstance("DH");
+                    keyAgreement.init(serverKeyPair.getPrivate());
+                    DHPublicKeySpec dhPubKeySpec = new DHPublicKeySpec(gymodp, p, g);
+                    PublicKey clientPublicKey = KeyFactory.getInstance("DH").generatePublic(dhPubKeySpec);
+                    keyAgreement.doPhase(clientPublicKey, true);
+                    byte[] serverSecret = keyAgreement.generateSecret();
+                    SecretKey serverAesKey = new SecretKeySpec(serverSecret, 0, 16, "AES");
+                    System.out.println(serverAesKey);
 
                 } catch (Exception e) {
                     System.out.println("Error durante la sesión del cliente: " + e.getMessage());

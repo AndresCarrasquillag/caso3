@@ -15,7 +15,7 @@ import javax.crypto.spec.DHParameterSpec;
 
 public class DiffieHallman {
 
-    public static BigInteger[] generarParams() throws Exception {
+    public static Object[] generarParams() throws Exception {
         KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("DH");
         keyPairGen.initialize(1024);
         KeyPair keyPair = keyPairGen.generateKeyPair();
@@ -26,7 +26,7 @@ public class DiffieHallman {
         BigInteger g = params.getG();
         BigInteger p = params.getP();
         BigInteger gxmodp = publicKey.getY();
-        BigInteger[] parametros = {g, p, gxmodp};
+        Object[] parametros = {g, p, gxmodp, keyPair};
 
         return parametros;
     }
