@@ -6,53 +6,48 @@ import java.net.Socket;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
+import java.util.Arrays;
 
 public class Cliente {
-    private PublicKey publicKey;
     public static final int PUERTO = 3400;
     public static final String SERVIDOR = "localhost";
 
-    public static void main(String args[]) throws IOException {
+    public static void main(String[] args) {
         Socket socket = null;
         try {
             socket = new Socket(SERVIDOR, PUERTO);
-            ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
             ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-            PublicKey llaveServ = (PublicKey) inputStream.readObject();
+            ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
 
-            // Punto 1
+            // Recibir la clave pública del servidor
+            PublicKey publicKey = (PublicKey) inputStream.readObject();
+
+            // Generar y enviar el reto
             SecureRandom random = new SecureRandom();
-            System.out.println(".");
             BigInteger reto = new BigInteger(1024, random);
-            out.writeObject(reto);
-            // PUNTO 4
-            byte[] firmaServ = (byte[]) inputStream.readObject();
-            System.out.println("h");
-            Signature signature = Signature.getInstance("SHA256withRSA");
-            signature.initVerify(llaveServ);
             byte[] retoBytes = reto.toByteArray();
+            out.writeObject(retoBytes);
+
+            // Recibir y verificar la firma del reto
+            byte[] firmaServ = (byte[]) inputStream.readObject();
+            Signature signature = Signature.getInstance("SHA256withRSA");
+            signature.initVerify(publicKey);
             signature.update(retoBytes);
-            System.out.println(retoBytes);
-            System.out.println(reto);
             if (signature.verify(firmaServ)) {
-                System.out.println("bien");
+                System.out.println("Firma verificada correctamente.");
             } else {
-                System.out.println("que mieee");
+                System.out.println("Falló la verificación de la firma.");
             }
-            /*BigInteger retoServ = new BigInteger(CifradoAsimetrico.descifrar(llaveServ, "RSA/ECB/PKCS1Padding", r));
-            if (retoServ.equals(reto)) {
-                System.out.println("hola");
-            } else {
-                System.out.println("que mieee");
-            }*/
-            // descrifrar y si es igual a reto entonces envía ok
-
         } catch (Exception e) {
-            // TODO: handle exception
+            System.out.println("Excepción: " + e.getMessage());
+        } finally {
+            if (socket != null) {
+                try {
+                    socket.close();
+                } catch (IOException e) {
+                    System.out.println("Error al cerrar el socket: " + e.getMessage());
+                }
+            }
         }
-    }
-
-    public Cliente(PublicKey publicKey, long p, long g, long x) {
-        this.publicKey = publicKey;
     }
 }
