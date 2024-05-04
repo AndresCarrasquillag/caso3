@@ -22,7 +22,7 @@ public class CifradoSimetrico {
             byte[] textoClaro = texto.getBytes();
             byte[] iv = new byte[cifrador.getBlockSize()];
             SecureRandom random = new SecureRandom();
-            random.nextBytes(iv); // Genera un IV aleatorio.
+            random.nextBytes(iv); 
             IvParameterSpec ivSpec = new IvParameterSpec(iv);
             cifrador.init(Cipher.ENCRYPT_MODE, llave, ivSpec);
             byte[] textoCifrado = cifrador.doFinal(textoClaro);

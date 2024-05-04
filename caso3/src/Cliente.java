@@ -37,7 +37,7 @@ public class Cliente {
             if (signature.verify(firmaServ)) {
                 System.out.println("OK");
             } else {
-                System.out.println("Falló la verificación de la firma.");
+                System.out.println("ERROR");
             }
             BigInteger g = (BigInteger)inputStream.readObject();
             BigInteger p = (BigInteger)inputStream.readObject();
