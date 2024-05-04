@@ -1,3 +1,4 @@
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -32,19 +33,28 @@ public class Cliente {
             Signature signature = Signature.getInstance("SHA256withRSA");
             signature.initVerify(publicKey);
             signature.update(retoBytes);
-            System.out.println(signature.verify(firmaServidor) ? "OK" : "ERROR");
-
-            // Procesos DH
-            BigInteger g = (BigInteger) in.readObject();
-            BigInteger p = (BigInteger) in.readObject();
-            BigInteger gxmodp = (BigInteger) in.readObject();
-            byte[] firmaDH = (byte[]) in.readObject();
-
-            // Verificar firma DH
-            signature.update(g.toByteArray());
-            signature.update(p.toByteArray());
-            signature.update(gxmodp.toByteArray());
-            System.out.println(signature.verify(firmaDH) ? "OK" : "ERROR");
+            if (signature.verify(firmaServ)) {
+                System.out.println("OK");
+            } else {
+                System.out.println("ERROR");
+            }
+            BigInteger g = (BigInteger)inputStream.readObject();
+            BigInteger p = (BigInteger)inputStream.readObject();
+            BigInteger gxmodp = (BigInteger)inputStream.readObject();
+            byte[] firmaDH = (byte[]) inputStream.readObject();
+            ByteBuffer buffer = ByteBuffer.allocate(3 * Long.BYTES);
+            buffer.put(g.toByteArray());
+            buffer.put(p.toByteArray());
+            buffer.put(gxmodp.toByteArray());
+            byte[] concatenated = buffer.array();
+            Signature signatureDH = Signature.getInstance("SHA256withRSA");
+            signatureDH.initVerify(publicKey);
+            signatureDH.update(concatenated);
+            if (signatureDH.verify(firmaDH)) {
+                System.out.println("OK");
+            } else {
+                System.out.println("ERROR");
+            }
 
         } catch (Exception e) {
             System.out.println("Excepción: " + e.getMessage());
