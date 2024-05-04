@@ -10,6 +10,7 @@ import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.SecureRandom;
 import java.security.Signature;
 
 
@@ -60,10 +61,23 @@ public class Servidor {
                     BigInteger p = serverPublicKey.getParams().getP();
                     BigInteger gxmodp = serverPublicKey.getY();
                     
-                    // Enviar G, P y gxmodp
+                    //----------IV----------------
+                    SecureRandom random = new SecureRandom();
+
+                    // Crear un array para almacenar 16 bytes aleatorios
+                    byte[] iv = new byte[16];
+
+                    // Generar 16 bytes aleatorios para el IV
+                    random.nextBytes(iv);
+
+                    // Mostrar el IV generado en formato hexadecimal
+                    System.out.println("IV: " + bytesToHex(iv));
+
+                    // Enviar G, P, iv y gxmodp
                     out.writeObject(g);
                     out.writeObject(p);
                     out.writeObject(gxmodp);
+                    out.writeObject(iv);
                     signature.update(g.toByteArray());
                     signature.update(p.toByteArray());
                     signature.update(gxmodp.toByteArray());

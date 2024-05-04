@@ -49,7 +49,15 @@ public class Cliente {
             BigInteger g = (BigInteger) in.readObject();
             BigInteger p = (BigInteger) in.readObject();
             BigInteger gxmodp = (BigInteger) in.readObject();
+            //------------------IV---------------------
+            byte[] iv = (byte[]) in.readObject();
+            //-----------------------------------------
             byte[] firmaDH = (byte[]) in.readObject();
+
+            
+
+            // Mostrar el IV generado en formato hexadecimal
+            System.out.println("IV: " + bytesToHex(iv));
 
             // Verificar firma DH
             signature.update(g.toByteArray());
