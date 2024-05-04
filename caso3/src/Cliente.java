@@ -33,6 +33,7 @@ public class Cliente {
             byte[] retoBytes = reto.toByteArray();
             signature.update(retoBytes);
             System.out.println(retoBytes);
+            System.out.println(reto);
             if (signature.verify(firmaServ)) {
                 System.out.println("bien");
             } else {

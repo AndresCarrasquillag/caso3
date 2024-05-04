@@ -38,14 +38,12 @@ public class Servidor {
                 ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
                 out.writeObject(publicKey);
                 // PUNTO 2
-                String retoString = (String)inputStream.readObject();
-                System.out.println("h");
-                BigInteger reto = new BigInteger(retoString);
+                BigInteger reto = (BigInteger)inputStream.readObject();
+                byte[] retoBytes = reto.toByteArray();
                 Signature firma = Signature.getInstance("SHA256withRSA");
                 firma.initSign(privateKey);
-                byte[] retoBytes = reto.toByteArray();
                 firma.update(retoBytes);
-                System.out.println(retoBytes);
+                System.out.println(reto);
                 byte[] firm = firma.sign();
                 out.writeObject(firm);
 
