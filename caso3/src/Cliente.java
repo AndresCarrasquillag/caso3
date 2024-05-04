@@ -42,6 +42,7 @@ public class Cliente {
             BigInteger g = (BigInteger)inputStream.readObject();
             BigInteger p = (BigInteger)inputStream.readObject();
             BigInteger gxmodp = (BigInteger)inputStream.readObject();
+            System.out.println(p);
             byte[] firmaDH = (byte[]) inputStream.readObject();
             ByteBuffer buffer = ByteBuffer.allocate(3 * Long.BYTES);
             buffer.put(g.toByteArray());
