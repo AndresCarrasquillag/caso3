@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
@@ -73,7 +74,25 @@ public class Cliente {
             byte[] clientSecret = keyAgreement.generateSecret();
             SecretKey clientAesKey = new SecretKeySpec(clientSecret, 0, 16, "AES");
             System.out.println(clientAesKey);
+            
 
+            // Generar el digest SHA-512 de la llave maestra
+            MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
+            byte[] digest = sha512.digest(clientAesKey.getEncoded());
+                
+            // Dividir el digest en dos partes de 256 bits (32 bytes cada una)
+            byte[] encryptionKey = new byte[32]; // para AES
+            byte[] hmacKey = new byte[32]; // para HMAC
+
+            System.arraycopy(digest, 0, encryptionKey, 0, 32); // Copiar los primeros 32 bytes
+            System.arraycopy(digest, 32, hmacKey, 0, 32); // Copiar los últimos 32 bytes
+
+            // Crear las claves SecretKey para AES y HMAC
+            SecretKey aesKey = new SecretKeySpec(encryptionKey, "AES");
+            SecretKey hmacSha256Key = new SecretKeySpec(hmacKey, "HmacSHA256");
+
+            System.out.println("AES Key: " + bytesToHex(aesKey.getEncoded()));
+            System.out.println("HMAC Key: " + bytesToHex(hmacSha256Key.getEncoded()));
 
 
         } catch (Exception e) {
@@ -85,6 +104,14 @@ public class Cliente {
                 System.out.println("Error al cerrar el socket: " + e.getMessage());
             }
         }
+    }
+    // Método para convertir bytes a hexadecimal para visualización
+    public static String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
     }
 }
 
