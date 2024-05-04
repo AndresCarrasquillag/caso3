@@ -3,15 +3,14 @@ import java.security.Key;
 import javax.crypto.Cipher;
 
 public class CifradoAsimetrico {
-    public static byte[] cifrar(Key llave, String algoritmo, String texto) {
+    public static byte[] cifrar(Key llave, String algoritmo, byte[] texto) {
 		byte[] textoCifrado;
 		
 		try {
 			Cipher cifrador = Cipher.getInstance(algoritmo);
-			byte[] textoClaro = texto.getBytes();
 			
 			cifrador.init(Cipher.ENCRYPT_MODE, llave);
-			textoCifrado = cifrador.doFinal(textoClaro);
+			textoCifrado = cifrador.doFinal(texto);
 			
 			return textoCifrado;
 		} catch (Exception e) {

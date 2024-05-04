@@ -17,13 +17,22 @@ public class Cliente {
             socket = new Socket(SERVIDOR, PUERTO);
             ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
             ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+            PublicKey llaveServ = (PublicKey) inputStream.readObject();
+
             // Punto 1
             SecureRandom random = new SecureRandom();
             System.out.println(".");
             BigInteger reto = new BigInteger(1024, random);
             out.writeObject(reto);
+
             // PUNTO 4
-            byte[] r = (byte[] )inputStream.readObject();
+            byte[] r = (byte[]) inputStream.readObject();
+            BigInteger retoServ = new BigInteger(CifradoAsimetrico.descifrar(llaveServ, "RSA/ECB/PKCS1Padding", r));
+            if (retoServ.equals(reto)) {
+                System.out.println("hola");
+            } else {
+                System.out.println("que mieee");
+            }
             // descrifrar y si es igual a reto entonces envía ok
 
         } catch (Exception e) {

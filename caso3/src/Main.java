@@ -23,7 +23,7 @@ public class Main {
 	public static KeyPair GenerarLlavesAsimétricas() throws NoSuchAlgorithmException {
 			
 			KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
-			generator.initialize(1024);
+			generator.initialize(2048);
 			KeyPair keyPair = generator.generateKeyPair();
 
 			//PublicKey publica = keyPair.getPublic();
