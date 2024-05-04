@@ -8,6 +8,7 @@ import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.Signature;
 
 import javax.crypto.spec.DHParameterSpec;
 
@@ -36,13 +37,20 @@ public class Servidor {
                 ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
                 ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
                 out.writeObject(publicKey);
-
                 // PUNTO 2
-                BigInteger reto = (BigInteger) inputStream.readObject();
-                System.out.println(reto);
+                String retoString = (String)inputStream.readObject();
+                System.out.println("h");
+                BigInteger reto = new BigInteger(retoString);
+                Signature firma = Signature.getInstance("SHA256withRSA");
+                firma.initSign(privateKey);
+                byte[] retoBytes = reto.toByteArray();
+                firma.update(retoBytes);
+                System.out.println(retoBytes);
+                byte[] firm = firma.sign();
+                out.writeObject(firm);
 
                 // PUNTO 3
-                out.writeObject(CifradoAsimetrico.cifrar(privateKey, "RSA/ECB/PKCS1Padding", reto.toByteArray()));
+                //out.writeObject(CifradoAsimetrico.cifrar(privateKey, "RSA/ECB/PKCS1Padding", reto.toByteArray()));
 
                 //PUNTO 5 server
                 String resp = (String) inputStream.readObject();

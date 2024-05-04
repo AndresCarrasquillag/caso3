@@ -5,6 +5,7 @@ import java.math.BigInteger;
 import java.net.Socket;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.Signature;
 
 public class Cliente {
     private PublicKey publicKey;
@@ -24,15 +25,25 @@ public class Cliente {
             System.out.println(".");
             BigInteger reto = new BigInteger(1024, random);
             out.writeObject(reto);
-
             // PUNTO 4
-            byte[] r = (byte[]) inputStream.readObject();
-            BigInteger retoServ = new BigInteger(CifradoAsimetrico.descifrar(llaveServ, "RSA/ECB/PKCS1Padding", r));
+            byte[] firmaServ = (byte[]) inputStream.readObject();
+            System.out.println("h");
+            Signature signature = Signature.getInstance("SHA256withRSA");
+            signature.initVerify(llaveServ);
+            byte[] retoBytes = reto.toByteArray();
+            signature.update(retoBytes);
+            System.out.println(retoBytes);
+            if (signature.verify(firmaServ)) {
+                System.out.println("bien");
+            } else {
+                System.out.println("que mieee");
+            }
+            /*BigInteger retoServ = new BigInteger(CifradoAsimetrico.descifrar(llaveServ, "RSA/ECB/PKCS1Padding", r));
             if (retoServ.equals(reto)) {
                 System.out.println("hola");
             } else {
                 System.out.println("que mieee");
-            }
+            }*/
             // descrifrar y si es igual a reto entonces envía ok
 
         } catch (Exception e) {
