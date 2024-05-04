@@ -34,9 +34,9 @@ public class Cliente {
             signature.initVerify(publicKey);
             signature.update(retoBytes);
             if (signature.verify(firmaServ)) {
-                System.out.println("Firma verificada correctamente.");
+                System.out.println("OK");
             } else {
-                System.out.println("Falló la verificación de la firma.");
+                System.out.println("ERROR");
             }
         } catch (Exception e) {
             System.out.println("Excepción: " + e.getMessage());
