@@ -1,3 +1,4 @@
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -44,11 +45,11 @@ public class Cliente {
             BigInteger gxmodp = (BigInteger)inputStream.readObject();
             System.out.println(p);
             byte[] firmaDH = (byte[]) inputStream.readObject();
-            ByteBuffer buffer = ByteBuffer.allocate(3 * Long.BYTES);
-            buffer.put(g.toByteArray());
-            buffer.put(p.toByteArray());
-            buffer.put(gxmodp.toByteArray());
-            byte[] concatenated = buffer.array();
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            outputStream.write(g.toByteArray());
+            outputStream.write(p.toByteArray());
+            outputStream.write(gxmodp.toByteArray());
+            byte[] concatenated = outputStream.toByteArray();
             Signature signatureDH = Signature.getInstance("SHA256withRSA");
             signatureDH.initVerify(publicKey);
             signatureDH.update(concatenated);
