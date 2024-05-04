@@ -4,6 +4,7 @@ import java.io.ObjectOutputStream;
 import java.math.BigInteger;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -32,11 +33,12 @@ public class Servidor {
                      
                      ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
                      ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream())) {
+                    // ENVIAR LLAVE PUBLICA AL MANIN
                     out.writeObject(publicKey);
 
+                    //PUNTO 2 Y 3
                     byte[] retoBytes = (byte[]) inputStream.readObject();
                     System.out.println("Reto recibido: " + new BigInteger(retoBytes));
-
                     Signature firma = Signature.getInstance("SHA256withRSA");
                     firma.initSign(privateKey);
                     firma.update(retoBytes);
@@ -44,7 +46,23 @@ public class Servidor {
                     out.writeObject(firm);
                     System.out.println("Firma enviada.");
 
-                    // Implementación adicional para Diffie-Hellman y otros pasos según necesario
+                    //PUNTO 6
+                    BigInteger[] params = DiffieHallman.generarParams();
+
+                    //PUNTO 7
+                    out.writeObject(params[0]);
+                    out.writeObject(params[1]);
+                    out.writeObject(params[2]);
+                    ByteBuffer buffer = ByteBuffer.allocate(3 * Long.BYTES);
+                    buffer.put(params[0].toByteArray());
+                    buffer.put(params[1].toByteArray());
+                    buffer.put(params[2].toByteArray());
+                    byte[] concatenated = buffer.array();
+                    Signature firmaDH = Signature.getInstance("SHA256withRSA");
+                    firmaDH.initSign(privateKey);
+                    firmaDH.update(concatenated);
+                    byte[] signature = firmaDH.sign();
+                    out.writeObject(signature);
                 } catch (Exception e) {
                     System.out.println("Error durante la sesión del cliente: " + e.getMessage());
                 }
