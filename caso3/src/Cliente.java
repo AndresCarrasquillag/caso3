@@ -45,8 +45,11 @@ public class Cliente {
             Signature signature = Signature.getInstance("SHA256withRSA");
             signature.initVerify(publicKey);
             signature.update(retoBytes);
-            System.out.println(signature.verify(firmaServidor) ? "OK" : "ERROR");
-            out.writeObject(signature.verify(firmaServidor) ? "OK" : "ERROR");
+            String verify = (signature.verify(firmaServidor) ? "OK" : "ERROR");
+            System.out.println(verify);
+            out.writeObject(verify);
+            verify = "";
+
             // Procesos DH
             BigInteger g = (BigInteger) in.readObject();
             BigInteger p = (BigInteger) in.readObject();
@@ -58,8 +61,10 @@ public class Cliente {
             signature.update(g.toByteArray());
             signature.update(p.toByteArray());
             signature.update(gxmodp.toByteArray());
-            System.out.println(signature.verify(firmaDH) ? "OK" : "ERROR");
-            out.writeObject(signature.verify(firmaDH) ? "OK" : "ERROR");
+
+            verify = (signature.verify(firmaDH) ? "OK" : "ERROR");
+            System.out.println(verify);
+            out.writeObject(verify);
 
             // Enviar gmody
             DHParameterSpec dhSpecClient = new DHParameterSpec(p, g);
@@ -111,36 +116,38 @@ public class Cliente {
 
                 if("OK".equals(in.readObject())) {
                     System.out.println("OK recibido");
+
+                    // Enviar consulta cifrada y su HMAC
+                    String consulta = "Consulta de saldo";
+                    byte[] consultabytes = consulta.getBytes();
+                    cipher.init(Cipher.ENCRYPT_MODE, aesKey, new IvParameterSpec(iv));
+                    byte[] encryptedQuery = cipher.doFinal(consultabytes);
+                    out.writeObject(encryptedQuery);
+
+                    Mac mac = Mac.getInstance("HmacSHA256");
+                    mac.init(hmacSha256Key);
+                    byte[] hmacConsulta = mac.doFinal(consulta.getBytes());
+                    out.writeObject(hmacConsulta);
+                    System.out.println("Consulta y HMAC enviados al servidor.");
+
+                    // Recibir y verificar la respuesta cifrada y su HMAC
+                    byte[] encryptedResponse = (byte[]) in.readObject();
+                    byte[] hmacResponse = (byte[]) in.readObject();
+                    cipher.init(Cipher.DECRYPT_MODE, aesKey, new IvParameterSpec(iv));
+                    byte[] decryptedResponse = cipher.doFinal(encryptedResponse);
+                    System.out.println("Respuesta recibida y descifrada: " + new String(decryptedResponse));
+
+                    mac.init(hmacSha256Key);
+                    byte[] calculatedHmac = mac.doFinal(decryptedResponse);
+
+                    if (MessageDigest.isEqual(hmacResponse, calculatedHmac)) {
+                        System.out.println("HMAC verificado con éxito.");
+                    } else {
+                        System.out.println("Error de verificación HMAC.");
+                    }
                 }
 
-                // Enviar consulta cifrada y su HMAC
-                String consulta = "Consulta de saldo";
-                byte[] consultabytes = consulta.getBytes();
-                cipher.init(Cipher.ENCRYPT_MODE, aesKey, new IvParameterSpec(iv));
-                byte[] encryptedQuery = cipher.doFinal(consultabytes);
-                out.writeObject(encryptedQuery);
-
-                Mac mac = Mac.getInstance("HmacSHA256");
-                mac.init(hmacSha256Key);
-                byte[] hmacConsulta = mac.doFinal(consulta.getBytes());
-                out.writeObject(hmacConsulta);
-                System.out.println("Consulta y HMAC enviados al servidor.");
-
-                // Recibir y verificar la respuesta cifrada y su HMAC
-                byte[] encryptedResponse = (byte[]) in.readObject();
-                byte[] hmacResponse = (byte[]) in.readObject();
-                cipher.init(Cipher.DECRYPT_MODE, aesKey, new IvParameterSpec(iv));
-                byte[] decryptedResponse = cipher.doFinal(encryptedResponse);
-                System.out.println("Respuesta recibida y descifrada: " + new String(decryptedResponse));
-
-                mac.init(hmacSha256Key);
-                byte[] calculatedHmac = mac.doFinal(decryptedResponse);
-
-                if (MessageDigest.isEqual(hmacResponse, calculatedHmac)) {
-                    System.out.println("HMAC verificado con éxito.");
-                } else {
-                    System.out.println("Error de verificación HMAC.");
-                }
+                
             }
 
         } catch (Exception e) {
