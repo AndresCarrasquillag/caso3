@@ -12,14 +12,13 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
-
-
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-
+import javax.crypto.Cipher;
 import javax.crypto.KeyAgreement;
+import javax.crypto.SecretKey;
 import javax.crypto.interfaces.DHPublicKey;
 import javax.crypto.spec.DHPublicKeySpec;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 public class Servidor {
     public static final int PUERTO = 3400;
@@ -63,14 +62,9 @@ public class Servidor {
                     
                     //----------IV----------------
                     SecureRandom random = new SecureRandom();
-
-                    // Crear un array para almacenar 16 bytes aleatorios
                     byte[] iv = new byte[16];
-
-                    // Generar 16 bytes aleatorios para el IV
                     random.nextBytes(iv);
 
-                    // Mostrar el IV generado en formato hexadecimal
                     System.out.println("IV: " + bytesToHex(iv));
 
                     // Enviar G, P, iv y gxmodp
@@ -84,8 +78,6 @@ public class Servidor {
                     byte[] firmaDH = signature.sign();
                     out.writeObject(firmaDH);
 
-                    
-
                     // Recibir gxmody y calcular clave secreta
                     BigInteger gymodp = (BigInteger) in.readObject();
                     KeyAgreement keyAgreement = KeyAgreement.getInstance("DH");
@@ -95,7 +87,6 @@ public class Servidor {
                     keyAgreement.doPhase(clientPublicKey, true);
                     byte[] serverSecret = keyAgreement.generateSecret();
                     SecretKey serverAesKey = new SecretKeySpec(serverSecret, 0, 16, "AES");
-                    System.out.println(serverAesKey);
 
                     // Generar el digest SHA-512 de la llave maestra
                     MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
@@ -105,8 +96,8 @@ public class Servidor {
                     byte[] encryptionKey = new byte[32]; // para AES
                     byte[] hmacKey = new byte[32]; // para HMAC
 
-                    System.arraycopy(digest, 0, encryptionKey, 0, 32); // Copiar los primeros 32 bytes
-                    System.arraycopy(digest, 32, hmacKey, 0, 32); // Copiar los últimos 32 bytes
+                    System.arraycopy(digest, 0, encryptionKey, 0, 32);
+                    System.arraycopy(digest, 32, hmacKey, 0, 32);
 
                     // Crear las claves SecretKey para AES y HMAC
                     SecretKey aesKey = new SecretKeySpec(encryptionKey, "AES");
@@ -115,6 +106,28 @@ public class Servidor {
                     System.out.println("AES Key: " + bytesToHex(aesKey.getEncoded()));
                     System.out.println("HMAC Key: " + bytesToHex(hmacSha256Key.getEncoded()));
 
+                    // Recibir comando "CONTINUAR" y credenciales cifradas
+                    Object command = in.readObject();
+                    if ("CONTINUAR".equals(command)) {
+                        byte[] encryptedCredentials = (byte[]) in.readObject();
+
+                        // Descifrar las credenciales
+                        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                        SecretKeySpec keySpec = new SecretKeySpec(aesKey.getEncoded(), "AES");
+                        IvParameterSpec ivSpec = new IvParameterSpec(iv);
+                        cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec);
+                        byte[] decryptedCredentialsBytes = cipher.doFinal(encryptedCredentials);
+                        String decryptedCredentials = new String(decryptedCredentialsBytes);
+
+                        // Verificar las credenciales
+                        String[] parts = decryptedCredentials.split(":");
+                        String username = parts[0];
+                        String password = parts[1];
+                        boolean credentialsValid = "usuario".equals(username) && "contrasena".equals(password);
+                        out.writeObject(credentialsValid ? "OK" : "ERROR");
+
+                        System.out.println("Credentials verification result: " + (credentialsValid ? "OK" : "ERROR"));
+                    }
 
                 } catch (Exception e) {
                     System.out.println("Error durante la sesión del cliente: " + e.getMessage());
@@ -130,6 +143,7 @@ public class Servidor {
             }
         }
     }
+    
     // Método para convertir bytes a hexadecimal para visualización
     public static String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
@@ -139,5 +153,8 @@ public class Servidor {
         return sb.toString();
     }
 }
+
+
+
 
 

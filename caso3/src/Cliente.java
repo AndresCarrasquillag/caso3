@@ -10,12 +10,13 @@ import java.security.MessageDigest;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
-
+import javax.crypto.Cipher;
 import javax.crypto.KeyAgreement;
 import javax.crypto.SecretKey;
 import javax.crypto.interfaces.DHPublicKey;
 import javax.crypto.spec.DHParameterSpec;
 import javax.crypto.spec.DHPublicKeySpec;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 public class Cliente {
@@ -49,15 +50,8 @@ public class Cliente {
             BigInteger g = (BigInteger) in.readObject();
             BigInteger p = (BigInteger) in.readObject();
             BigInteger gxmodp = (BigInteger) in.readObject();
-            //------------------IV---------------------
             byte[] iv = (byte[]) in.readObject();
-            //-----------------------------------------
             byte[] firmaDH = (byte[]) in.readObject();
-
-            
-
-            // Mostrar el IV generado en formato hexadecimal
-            System.out.println("IV: " + bytesToHex(iv));
 
             // Verificar firma DH
             signature.update(g.toByteArray());
@@ -73,7 +67,7 @@ public class Cliente {
             BigInteger gymodp = ((DHPublicKey) clientKeyPair.getPublic()).getY();
             out.writeObject(gymodp);
 
-            //Calcular Llave
+            // Calcular Llave
             KeyAgreement keyAgreement = KeyAgreement.getInstance("DH");
             keyAgreement.init(clientKeyPair.getPrivate());
             DHPublicKeySpec dhPubKeySpec = new DHPublicKeySpec(gxmodp, p, g);
@@ -81,30 +75,42 @@ public class Cliente {
             keyAgreement.doPhase(serverPublicKey, true);
             byte[] clientSecret = keyAgreement.generateSecret();
             SecretKey clientAesKey = new SecretKeySpec(clientSecret, 0, 16, "AES");
-            System.out.println(clientAesKey);
-            
 
             // Generar el digest SHA-512 de la llave maestra
             MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
             byte[] digest = sha512.digest(clientAesKey.getEncoded());
-                
+
             // Dividir el digest en dos partes de 256 bits (32 bytes cada una)
             byte[] encryptionKey = new byte[32]; // para AES
             byte[] hmacKey = new byte[32]; // para HMAC
 
-            System.arraycopy(digest, 0, encryptionKey, 0, 32); // Copiar los primeros 32 bytes
-            System.arraycopy(digest, 32, hmacKey, 0, 32); // Copiar los últimos 32 bytes
+            System.arraycopy(digest, 0, encryptionKey, 0, 32);
+            System.arraycopy(digest, 32, hmacKey, 0, 32);
 
             // Crear las claves SecretKey para AES y HMAC
             SecretKey aesKey = new SecretKeySpec(encryptionKey, "AES");
             SecretKey hmacSha256Key = new SecretKeySpec(hmacKey, "HmacSHA256");
 
-            System.out.println("AES Key: " + bytesToHex(aesKey.getEncoded()));
-            System.out.println("HMAC Key: " + bytesToHex(hmacSha256Key.getEncoded()));
+            // Enviar comando "CONTINUAR" y credenciales cifradas
+            String username = "usuario";
+            String password = "contrasena";
+            String credentials = username + ":" + password;
 
+            // Cifrar las credenciales
+            byte[] credentialsBytes = credentials.getBytes();
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            SecretKeySpec keySpec = new SecretKeySpec(aesKey.getEncoded(), "AES");
+            IvParameterSpec ivSpec = new IvParameterSpec(iv);
+            cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec);
+            byte[] encryptedCredentials = cipher.doFinal(credentialsBytes);
+
+            out.writeObject("CONTINUAR");
+            out.writeObject(encryptedCredentials);
+            System.out.println("CONTINUAR");
+            System.out.println("Credentials sent successfully.");
 
         } catch (Exception e) {
-            System.out.println("Excepción: " + e.getMessage());
+            System.out.println("Exception: " + e.getMessage());
         } finally {
             try {
                 if (socket != null) socket.close();
@@ -113,6 +119,7 @@ public class Cliente {
             }
         }
     }
+    
     // Método para convertir bytes a hexadecimal para visualización
     public static String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
