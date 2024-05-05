@@ -10,6 +10,8 @@ import java.security.MessageDigest;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
+import java.util.Scanner;
+
 import javax.crypto.Cipher;
 import javax.crypto.KeyAgreement;
 import javax.crypto.Mac;
@@ -25,6 +27,18 @@ public class Cliente {
     public static final String SERVIDOR = "localhost";
 
     public static void main(String[] args) {
+        System.out.println("Ingrese el número de clientes a lanzar:");
+        Scanner scanner = new Scanner(System.in);
+        int numClientes = scanner.nextInt();
+        scanner.close();
+
+        for (int i = 0; i < numClientes; i++) {
+            Thread thread = new Thread(() -> run());
+            thread.start();
+        } 
+    }
+
+    public static void run() {
         Socket socket = null;
         try {
             socket = new Socket(SERVIDOR, PUERTO);
