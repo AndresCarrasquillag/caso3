@@ -22,7 +22,7 @@ import javax.crypto.spec.DHPublicKeySpec;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-public class Cliente {
+public class Cliente implements Runnable {
     public static final int PUERTO = 3400;
     public static final String SERVIDOR = "localhost";
 
@@ -33,12 +33,13 @@ public class Cliente {
         scanner.close();
 
         for (int i = 0; i < numClientes; i++) {
-            Thread thread = new Thread(() -> run());
+            Thread thread = new Thread(new Cliente());
             thread.start();
         } 
     }
 
-    public static void run() {
+    @Override
+    public void run() {
         Socket socket = null;
         try {
             socket = new Socket(SERVIDOR, PUERTO);
