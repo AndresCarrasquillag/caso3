@@ -14,6 +14,7 @@ import java.security.SecureRandom;
 import java.security.Signature;
 import javax.crypto.Cipher;
 import javax.crypto.KeyAgreement;
+import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.interfaces.DHPublicKey;
 import javax.crypto.spec.DHPublicKeySpec;
@@ -51,7 +52,7 @@ public class Servidor {
                     byte[] firma = signature.sign();
                     out.writeObject(firma);
 
-                    // Proceso de establecimiento de la conexión segura (Diffie-Hellman y demás)
+                    // Establecimiento de la conexión segura
                     KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("DH");
                     keyPairGen.initialize(1024);
                     KeyPair serverKeyPair = keyPairGen.generateKeyPair();
@@ -109,6 +110,47 @@ public class Servidor {
                     out.writeObject(credentialsValid ? "OK" : "ERROR");
                     System.out.println("Resultado de la verificación de credenciales: " + (credentialsValid ? "OK" : "ERROR"));
 
+                    // Paso 19-21: Recibir consulta cifrada, verificar HMAC, procesar y responder
+                    byte[] consultaCifrada = (byte[]) in.readObject();
+                    byte[] hmacConsultaRecibido = (byte[]) in.readObject();
+
+                    cipher.init(Cipher.DECRYPT_MODE, aesKey, new IvParameterSpec(iv));
+                    byte[] consultaDescifrada = cipher.doFinal(consultaCifrada);
+                    System.out.println("Consulta recibida y descifrada: " + new String(consultaDescifrada));
+
+                    Mac mac = Mac.getInstance("HmacSHA256");
+                    mac.init(hmacSha256Key);
+                    byte[] hmacCalculado = mac.doFinal(consultaDescifrada);
+                    if (MessageDigest.isEqual(hmacConsultaRecibido, hmacCalculado)) {
+                        System.out.println("HMAC verificado con éxito.");
+                    } else {
+                        System.out.println("Error de verificación HMAC.");
+
+                    }
+                    
+                  
+                    String respuesta = "Saldo: $1000";
+                    byte[] respuestaBytes = respuesta.getBytes();
+                    cipher.init(Cipher.ENCRYPT_MODE, aesKey, new IvParameterSpec(iv));
+                    byte[] respuestaCifrada = cipher.doFinal(respuestaBytes);
+                    out.writeObject(respuestaCifrada);
+                    
+                    byte[] hmacRespuesta = mac.doFinal(respuestaBytes);
+                    out.writeObject(hmacRespuesta);
+                    System.out.println("Respuesta y HMAC enviados al cliente.");
+
+
+
+
+
+
+
+
+
+
+
+
+
                 } catch (Exception e) {
                     System.out.println("Error durante la sesión del cliente: " + e.getMessage());
                 }
@@ -124,6 +166,7 @@ public class Servidor {
         }
     }
 }
+
 
 
 

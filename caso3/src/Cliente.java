@@ -12,6 +12,7 @@ import java.security.SecureRandom;
 import java.security.Signature;
 import javax.crypto.Cipher;
 import javax.crypto.KeyAgreement;
+import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.interfaces.DHPublicKey;
 import javax.crypto.spec.DHParameterSpec;
@@ -50,9 +51,7 @@ public class Cliente {
             BigInteger g = (BigInteger) in.readObject();
             BigInteger p = (BigInteger) in.readObject();
             BigInteger gxmodp = (BigInteger) in.readObject();
-            //------------------IV---------------------
             byte[] iv = (byte[]) in.readObject();
-            //-----------------------------------------
             byte[] firmaDH = (byte[]) in.readObject();
 
             // Verificar firma DH
@@ -69,7 +68,7 @@ public class Cliente {
             BigInteger gymodp = ((DHPublicKey) clientKeyPair.getPublic()).getY();
             out.writeObject(gymodp);
 
-            //Calcular Llave
+            // Calcular llave compartida
             KeyAgreement keyAgreement = KeyAgreement.getInstance("DH");
             keyAgreement.init(clientKeyPair.getPrivate());
             DHPublicKeySpec dhPubKeySpec = new DHPublicKeySpec(gxmodp, p, g);
@@ -81,7 +80,7 @@ public class Cliente {
             // Generar el digest SHA-512 de la llave maestra
             MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
             byte[] digest = sha512.digest(clientAesKey.getEncoded());
-                
+
             // Dividir el digest en dos partes de 256 bits (32 bytes cada una)
             byte[] encryptionKey = new byte[32]; // para AES
             byte[] hmacKey = new byte[32]; // para HMAC
@@ -93,13 +92,12 @@ public class Cliente {
             SecretKey aesKey = new SecretKeySpec(encryptionKey, "AES");
             SecretKey hmacSha256Key = new SecretKeySpec(hmacKey, "HmacSHA256");
 
-            // Paso 12: Esperar la señal "CONTINUAR"
-            String serverCommand = (String) in.readObject();
-            if ("CONTINUAR".equals(serverCommand)) {
-                System.out.println("CONTINUAR ");
+            // Esperar la señal "CONTINUAR"
+            if ("CONTINUAR".equals(in.readObject())) {
+                System.out.println("CONTINUAR recibido");
 
-                // Paso 13 y 14: Enviar credenciales cifradas
-                String credentials = "usuario:contrasena"; // Ejemplo de credenciales
+                // Enviar credenciales cifradas
+                String credentials = "usuario:contrasena";
                 Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
                 SecretKeySpec keySpec = new SecretKeySpec(aesKey.getEncoded(), "AES");
                 IvParameterSpec ivSpec = new IvParameterSpec(iv);
@@ -107,6 +105,34 @@ public class Cliente {
                 byte[] encryptedCredentials = cipher.doFinal(credentials.getBytes());
                 out.writeObject(encryptedCredentials);
                 System.out.println("Credenciales enviadas exitosamente.");
+
+                // Enviar consulta cifrada y su HMAC
+                String consulta = "Consulta de saldo";
+                byte[] encryptedQuery = cipher.doFinal(consulta.getBytes());
+                out.writeObject(encryptedQuery);
+
+                Mac mac = Mac.getInstance("HmacSHA256");
+                mac.init(hmacSha256Key);
+                byte[] hmacConsulta = mac.doFinal(consulta.getBytes());
+                out.writeObject(hmacConsulta);
+                System.out.println("Consulta y HMAC enviados al servidor.");
+
+                // Recibir y verificar la respuesta cifrada y su HMAC
+                byte[] encryptedResponse = (byte[]) in.readObject();
+                byte[] hmacResponse = (byte[]) in.readObject();
+
+                cipher.init(Cipher.DECRYPT_MODE, aesKey, new IvParameterSpec(iv));
+                byte[] decryptedResponse = cipher.doFinal(encryptedResponse);
+                System.out.println("Respuesta recibida y descifrada: " + new String(decryptedResponse));
+
+                mac.init(hmacSha256Key);
+                byte[] calculatedHmac = mac.doFinal(decryptedResponse);
+
+                if (MessageDigest.isEqual(hmacResponse, calculatedHmac)) {
+                    System.out.println("HMAC verificado con éxito.");
+                } else {
+                    System.out.println("Error de verificación HMAC.");
+                }
             }
 
         } catch (Exception e) {
@@ -119,15 +145,7 @@ public class Cliente {
             }
         }
     }
-
-    // Método para convertir bytes a hexadecimal para visualización
-    public static String bytesToHex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        for (byte b : bytes) {
-            sb.append(String.format("%02x", b));
-        }
-        return sb.toString();
-    }
 }
+
 
 
