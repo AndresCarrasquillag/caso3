@@ -50,7 +50,9 @@ public class Cliente {
             BigInteger g = (BigInteger) in.readObject();
             BigInteger p = (BigInteger) in.readObject();
             BigInteger gxmodp = (BigInteger) in.readObject();
+            //------------------IV---------------------
             byte[] iv = (byte[]) in.readObject();
+            //-----------------------------------------
             byte[] firmaDH = (byte[]) in.readObject();
 
             // Verificar firma DH
@@ -67,7 +69,7 @@ public class Cliente {
             BigInteger gymodp = ((DHPublicKey) clientKeyPair.getPublic()).getY();
             out.writeObject(gymodp);
 
-            // Calcular Llave
+            //Calcular Llave
             KeyAgreement keyAgreement = KeyAgreement.getInstance("DH");
             keyAgreement.init(clientKeyPair.getPrivate());
             DHPublicKeySpec dhPubKeySpec = new DHPublicKeySpec(gxmodp, p, g);
@@ -79,35 +81,33 @@ public class Cliente {
             // Generar el digest SHA-512 de la llave maestra
             MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
             byte[] digest = sha512.digest(clientAesKey.getEncoded());
-
+                
             // Dividir el digest en dos partes de 256 bits (32 bytes cada una)
             byte[] encryptionKey = new byte[32]; // para AES
             byte[] hmacKey = new byte[32]; // para HMAC
 
-            System.arraycopy(digest, 0, encryptionKey, 0, 32);
-            System.arraycopy(digest, 32, hmacKey, 0, 32);
+            System.arraycopy(digest, 0, encryptionKey, 0, 32); // Copiar los primeros 32 bytes
+            System.arraycopy(digest, 32, hmacKey, 0, 32); // Copiar los últimos 32 bytes
 
             // Crear las claves SecretKey para AES y HMAC
             SecretKey aesKey = new SecretKeySpec(encryptionKey, "AES");
             SecretKey hmacSha256Key = new SecretKeySpec(hmacKey, "HmacSHA256");
 
-            // Enviar comando "CONTINUAR" y credenciales cifradas
-            String username = "usuario";
-            String password = "contrasena";
-            String credentials = username + ":" + password;
+            // Paso 12: Esperar la señal "CONTINUAR"
+            String serverCommand = (String) in.readObject();
+            if ("CONTINUAR".equals(serverCommand)) {
+                System.out.println("CONTINUAR ");
 
-            // Cifrar las credenciales
-            byte[] credentialsBytes = credentials.getBytes();
-            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-            SecretKeySpec keySpec = new SecretKeySpec(aesKey.getEncoded(), "AES");
-            IvParameterSpec ivSpec = new IvParameterSpec(iv);
-            cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec);
-            byte[] encryptedCredentials = cipher.doFinal(credentialsBytes);
-
-            out.writeObject("CONTINUAR");
-            out.writeObject(encryptedCredentials);
-            System.out.println("CONTINUAR");
-            System.out.println("Credentials sent successfully.");
+                // Paso 13 y 14: Enviar credenciales cifradas
+                String credentials = "usuario:contrasena"; // Ejemplo de credenciales
+                Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                SecretKeySpec keySpec = new SecretKeySpec(aesKey.getEncoded(), "AES");
+                IvParameterSpec ivSpec = new IvParameterSpec(iv);
+                cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec);
+                byte[] encryptedCredentials = cipher.doFinal(credentials.getBytes());
+                out.writeObject(encryptedCredentials);
+                System.out.println("Credenciales enviadas exitosamente.");
+            }
 
         } catch (Exception e) {
             System.out.println("Exception: " + e.getMessage());
@@ -119,7 +119,7 @@ public class Cliente {
             }
         }
     }
-    
+
     // Método para convertir bytes a hexadecimal para visualización
     public static String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
@@ -129,4 +129,5 @@ public class Cliente {
         return sb.toString();
     }
 }
+
 
