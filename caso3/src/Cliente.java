@@ -46,7 +46,7 @@ public class Cliente {
             signature.initVerify(publicKey);
             signature.update(retoBytes);
             System.out.println(signature.verify(firmaServidor) ? "OK" : "ERROR");
-
+            out.writeObject(signature.verify(firmaServidor) ? "OK" : "ERROR");
             // Procesos DH
             BigInteger g = (BigInteger) in.readObject();
             BigInteger p = (BigInteger) in.readObject();
@@ -59,6 +59,7 @@ public class Cliente {
             signature.update(p.toByteArray());
             signature.update(gxmodp.toByteArray());
             System.out.println(signature.verify(firmaDH) ? "OK" : "ERROR");
+            out.writeObject(signature.verify(firmaDH) ? "OK" : "ERROR");
 
             // Enviar gmody
             DHParameterSpec dhSpecClient = new DHParameterSpec(p, g);
@@ -91,6 +92,8 @@ public class Cliente {
             // Crear las claves SecretKey para AES y HMAC
             SecretKey aesKey = new SecretKeySpec(encryptionKey, "AES");
             SecretKey hmacSha256Key = new SecretKeySpec(hmacKey, "HmacSHA256");
+            
+            
 
             // Esperar la señal "CONTINUAR"
             if ("CONTINUAR".equals(in.readObject())) {
@@ -106,9 +109,15 @@ public class Cliente {
                 out.writeObject(encryptedCredentials);
                 System.out.println("Credenciales enviadas exitosamente.");
 
+                if("OK".equals(in.readObject())) {
+                    System.out.println("OK recibido");
+                }
+
                 // Enviar consulta cifrada y su HMAC
                 String consulta = "Consulta de saldo";
-                byte[] encryptedQuery = cipher.doFinal(consulta.getBytes());
+                byte[] consultabytes = consulta.getBytes();
+                cipher.init(Cipher.ENCRYPT_MODE, aesKey, new IvParameterSpec(iv));
+                byte[] encryptedQuery = cipher.doFinal(consultabytes);
                 out.writeObject(encryptedQuery);
 
                 Mac mac = Mac.getInstance("HmacSHA256");
@@ -120,7 +129,6 @@ public class Cliente {
                 // Recibir y verificar la respuesta cifrada y su HMAC
                 byte[] encryptedResponse = (byte[]) in.readObject();
                 byte[] hmacResponse = (byte[]) in.readObject();
-
                 cipher.init(Cipher.DECRYPT_MODE, aesKey, new IvParameterSpec(iv));
                 byte[] decryptedResponse = cipher.doFinal(encryptedResponse);
                 System.out.println("Respuesta recibida y descifrada: " + new String(decryptedResponse));

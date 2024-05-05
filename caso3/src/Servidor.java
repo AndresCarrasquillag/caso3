@@ -52,6 +52,10 @@ public class Servidor {
                     byte[] firma = signature.sign();
                     out.writeObject(firma);
 
+                    if("OK".equals(in.readObject())) {
+                        System.out.println("OK recibido");
+                    }
+
                     // Establecimiento de la conexión segura
                     KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("DH");
                     keyPairGen.initialize(1024);
@@ -74,6 +78,10 @@ public class Servidor {
                     signature.update(gxmodp.toByteArray());
                     byte[] firmaDH = signature.sign();
                     out.writeObject(firmaDH);
+
+                    if("OK".equals(in.readObject())) {
+                        System.out.println("OK recibido");
+                    }
 
                     BigInteger gymodp = (BigInteger) in.readObject();
                     KeyAgreement keyAgreement = KeyAgreement.getInstance("DH");
@@ -138,17 +146,6 @@ public class Servidor {
                     byte[] hmacRespuesta = mac.doFinal(respuestaBytes);
                     out.writeObject(hmacRespuesta);
                     System.out.println("Respuesta y HMAC enviados al cliente.");
-
-
-
-
-
-
-
-
-
-
-
 
 
                 } catch (Exception e) {
