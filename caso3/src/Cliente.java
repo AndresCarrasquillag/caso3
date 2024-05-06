@@ -57,10 +57,12 @@ public class Cliente implements Runnable {
 
             // Recibir y verificar la firma del reto
             byte[] firmaServidor = (byte[]) in.readObject();
+            long startTimeFirma = System.nanoTime();
             Signature signature = Signature.getInstance("SHA256withRSA");
             signature.initVerify(publicKey);
             signature.update(retoBytes);
             String verify = (signature.verify(firmaServidor) ? "OK" : "ERROR");
+            long finalTimeFirma = System.nanoTime();
             System.out.println(verify);
             out.writeObject(verify);
             verify = "";
@@ -82,11 +84,13 @@ public class Cliente implements Runnable {
             out.writeObject(verify);
 
             // Enviar gmody
+            long startTimeGy = System.nanoTime();
             DHParameterSpec dhSpecClient = new DHParameterSpec(p, g);
             KeyPairGenerator clientKeyPairGen = KeyPairGenerator.getInstance("DH");
             clientKeyPairGen.initialize(dhSpecClient);
             KeyPair clientKeyPair = clientKeyPairGen.generateKeyPair();
             BigInteger gymodp = ((DHPublicKey) clientKeyPair.getPublic()).getY();
+            long finalTimeGy = System.nanoTime();
             out.writeObject(gymodp);
 
             // Calcular llave compartida
@@ -133,15 +137,19 @@ public class Cliente implements Runnable {
                     System.out.println("OK recibido");
 
                     // Enviar consulta cifrada y su HMAC
+                    long startTimeConsulta = System.nanoTime();
                     String consulta = "Consulta de saldo";
                     byte[] consultabytes = consulta.getBytes();
                     cipher.init(Cipher.ENCRYPT_MODE, aesKey, new IvParameterSpec(iv));
                     byte[] encryptedQuery = cipher.doFinal(consultabytes);
+                    long finalTimeConsulta = System.nanoTime();
                     out.writeObject(encryptedQuery);
 
+                    long startTimeHMAC = System.nanoTime();
                     Mac mac = Mac.getInstance("HmacSHA256");
                     mac.init(hmacSha256Key);
                     byte[] hmacConsulta = mac.doFinal(consulta.getBytes());
+                    long finalTimeHMAC = System.nanoTime();
                     out.writeObject(hmacConsulta);
                     System.out.println("Consulta y HMAC enviados al servidor.");
 
@@ -160,6 +168,15 @@ public class Cliente implements Runnable {
                     } else {
                         System.out.println("Error de verificación HMAC.");
                     }
+
+                    long tiempoFirma = finalTimeFirma-startTimeFirma;
+                    long tiempoGy = finalTimeGy-startTimeGy;
+                    long tiempoConsulta = finalTimeConsulta-startTimeConsulta;
+                    long tiempoAutenticacion = finalTimeHMAC-startTimeHMAC;
+                    System.out.println("Tiempo de verificar firma: "+tiempoFirma);
+                    System.out.println("Tiempo de calcular gy: "+tiempoGy);
+                    System.out.println("Tiempo de consulta: "+tiempoConsulta);
+                    System.out.println("Tiempo de HMAC: "+tiempoAutenticacion);
                 }
 
                 

@@ -65,10 +65,12 @@ public class ServidorThread extends Thread {
                 out.writeObject(p);
                 out.writeObject(gxmodp);
                 out.writeObject(iv);
+                long startTimeFirma = System.currentTimeMillis();
                 signature.update(g.toByteArray());
                 signature.update(p.toByteArray());
                 signature.update(gxmodp.toByteArray());
                 byte[] firmaDH = signature.sign();
+                long finalTimeFirma = System.currentTimeMillis();
                 out.writeObject(firmaDH);
 
                 if("OK".equals(in.readObject())) {
@@ -112,10 +114,13 @@ public class ServidorThread extends Thread {
                     byte[] consultaCifrada = (byte[]) in.readObject();
                     byte[] hmacConsultaRecibido = (byte[]) in.readObject();
 
+                    long startTimeConsulta = System.currentTimeMillis();
                     cipher.init(Cipher.DECRYPT_MODE, aesKey, new IvParameterSpec(iv));
                     byte[] consultaDescifrada = cipher.doFinal(consultaCifrada);
+                    long finalTimeConsulta = System.currentTimeMillis();
                     System.out.println("Consulta recibida y descifrada: " + new String(consultaDescifrada));
 
+                    long startTimeHMAC = System.nanoTime();
                     Mac mac = Mac.getInstance("HmacSHA256");
                     mac.init(hmacSha256Key);
                     byte[] hmacCalculado = mac.doFinal(consultaDescifrada);
@@ -123,8 +128,8 @@ public class ServidorThread extends Thread {
                         System.out.println("HMAC verificado con éxito.");
                     } else {
                         System.out.println("Error de verificación HMAC.");
-
                     }
+                    long finalTimeHMAC = System.nanoTime();
 
                     String respuesta = "Saldo: $1000";
                     byte[] respuestaBytes = respuesta.getBytes();
@@ -135,6 +140,12 @@ public class ServidorThread extends Thread {
                     byte[] hmacRespuesta = mac.doFinal(respuestaBytes);
                     out.writeObject(hmacRespuesta);
                     System.out.println("Respuesta y HMAC enviados al cliente.");
+                    long duracionFirma = finalTimeFirma-startTimeFirma;
+                    long duracionConsulta = finalTimeConsulta-startTimeConsulta;
+                    System.out.println("Tiempo generar firma: " + duracionFirma);
+                    System.out.println("Tiempo descrifrar consulta: " + duracionConsulta);
+                    long tiempoAutenticacion = finalTimeHMAC-startTimeHMAC;
+                    System.out.println("tiempo HMAC: "+tiempoAutenticacion);
                 }   
             }
         } catch (Exception e) {
